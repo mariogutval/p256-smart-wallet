@@ -1,0 +1,6 @@
+[submodule "lib/forge-std"]
+	path = lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "lib/reference-implementation"]
+	path = lib/reference-implementation
+	url = https://github.com/erc6900/reference-implementation
