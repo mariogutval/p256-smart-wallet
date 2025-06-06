@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT AND Apache-2.0
 pragma solidity ^0.8.20;
 
-import { SCL_RIP7212 } from "@SCL/lib/libSCL_RIP7212.sol";
-import { ec_isOnCurve } from "@SCL/elliptic/SCL_ecOncurve.sol";
-import { a, b, p, n } from "@SCL/fields/SCL_secp256r1.sol";
+import {SCL_RIP7212} from "@SCL/lib/libSCL_RIP7212.sol";
+import {ec_isOnCurve} from "@SCL/elliptic/SCL_ecOncurve.sol";
+import {a, b, p, n} from "@SCL/fields/SCL_secp256r1.sol";
 
-import { WebAuthn } from "./WebAuthn.sol";
+import {WebAuthn} from "./WebAuthn.sol";
 
 /**
  * @title P256SCLVerifierLib
@@ -36,7 +36,11 @@ library P256SCLVerifierLib {
      * @param x The X coordinate of the public key that signed the message
      * @param y The Y coordinate of the public key that signed the message
      */
-    function verifySignature(bytes32 message_hash, uint256 r, uint256 s, uint256 x, uint256 y) internal view returns (bool) {
+    function verifySignature(bytes32 message_hash, uint256 r, uint256 s, uint256 x, uint256 y)
+        internal
+        view
+        returns (bool)
+    {
         // check for signature malleability
         if (s > P256_N_DIV_2) {
             return false;

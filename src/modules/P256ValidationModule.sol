@@ -24,11 +24,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 ///          (account, entityId)** and validates signatures & runtime calls
 ///          exactly like `SingleSignerValidationModule`, but on the secp256r1
 ///          curve instead of secp256k1.
-contract P256ValidationModule is
-    IP256ValidationModule,
-    ReplaySafeWrapper,
-    BaseModule
-{
+contract P256ValidationModule is IP256ValidationModule, ReplaySafeWrapper, BaseModule {
     using MessageHashUtils for bytes32;
 
     /* ───────────────────────── Constants ─────────────────────────────── */
@@ -38,7 +34,7 @@ contract P256ValidationModule is
 
     // bytes4(keccak256("isValidSignature(bytes32,bytes)"))
     bytes4 internal constant _1271_MAGIC_VALUE = 0x1626ba7e;
-    bytes4 internal constant _1271_INVALID     = 0xffffffff;
+    bytes4 internal constant _1271_INVALID = 0xffffffff;
 
     /* ───────────────────────── Storage ───────────────────────────────── */
 
@@ -48,9 +44,7 @@ contract P256ValidationModule is
     /* ───────────────────────  Admin helpers  ─────────────────────────── */
 
     /// @notice Replace the stored pass-key for `msg.sender` + `entityId`.
-    function transferPasskey(uint32 entityId, P256PublicKey memory newKey)
-        external
-    {
+    function transferPasskey(uint32 entityId, P256PublicKey memory newKey) external {
         _transferPasskey(entityId, newKey);
     }
 
@@ -62,8 +56,7 @@ contract P256ValidationModule is
 
     /// @dev `data = abi.encode(uint32 entityId, P256PublicKey key)`
     function onInstall(bytes calldata data) external override {
-        (uint32 entityId, P256PublicKey memory key) =
-            abi.decode(data, (uint32, P256PublicKey));
+        (uint32 entityId, P256PublicKey memory key) = abi.decode(data, (uint32, P256PublicKey));
         _transferPasskey(entityId, key);
     }
 
@@ -76,11 +69,7 @@ contract P256ValidationModule is
     /* ─────────────────── IERC6900ValidationModule  ───────────────────── */
 
     /// @inheritdoc IERC6900ValidationModule
-    function validateUserOp(
-        uint32                    entityId,
-        PackedUserOperation calldata userOp,
-        bytes32                   userOpHash
-    )
+    function validateUserOp(uint32 entityId, PackedUserOperation calldata userOp, bytes32 userOpHash)
         external
         view
         override
@@ -89,8 +78,8 @@ contract P256ValidationModule is
         P256PublicKey memory key = passkeys[entityId][userOp.sender];
 
         bool ok = P256VerifierLib._verifyRawP256Signature(
-            userOpHash,                   // already a 32-byte hash
-            userOp.signature,             // raw (r‖s) 64-byte sig
+            userOpHash, // already a 32-byte hash
+            userOp.signature, // raw (r‖s) 64-byte sig
             key.x,
             key.y
         );
@@ -101,16 +90,12 @@ contract P256ValidationModule is
     /// @inheritdoc IERC6900ValidationModule
     function validateRuntime(
         address account,
-        uint32  entityId,
+        uint32 entityId,
         address sender,
-        uint256,            /* value      – unused */
-        bytes calldata,     /* data       – unused */
-        bytes calldata      /* auth blob  – unused */
-    )
-        external
-        view
-        override
-    {
+        uint256, /* value      – unused */
+        bytes calldata, /* data       – unused */
+        bytes calldata /* auth blob  – unused */
+    ) external view override {
         // Authorised iff caller is the account itself *or*
         // the call is forwarded by the EntryPoint (which uses CALL not DELEGATECALL).
         if (sender != address(this) && sender != account) {
@@ -124,48 +109,30 @@ contract P256ValidationModule is
 
     /// @inheritdoc IERC6900ValidationModule
     function validateSignature(
-        address         account,
-        uint32          entityId,
-        address,        /* sender        – unused in this module */
-        bytes32         digest,
-        bytes calldata  signature
-    )
-        external
-        view
-        override
-        returns (bytes4)
-    {
+        address account,
+        uint32 entityId,
+        address, /* sender        – unused in this module */
+        bytes32 digest,
+        bytes calldata signature
+    ) external view override returns (bytes4) {
         bytes32 wrapped = replaySafeHash(account, digest);
 
         P256PublicKey memory key = passkeys[entityId][account];
 
-        bool ok = P256VerifierLib._verifyRawP256Signature(
-            wrapped,
-            signature,
-            key.x,
-            key.y
-        );
+        bool ok = P256VerifierLib._verifyRawP256Signature(wrapped, signature, key.x, key.y);
 
         return ok ? _1271_MAGIC_VALUE : _1271_INVALID;
     }
 
     /* ───────────────────── supportsInterface  ────────────────────────── */
 
-    function supportsInterface(bytes4 id)
-        public
-        view
-        override(BaseModule, IERC165)
-        returns (bool)
-    {
-        return id == type(IERC6900ValidationModule).interfaceId
-            || super.supportsInterface(id);
+    function supportsInterface(bytes4 id) public view override(BaseModule, IERC165) returns (bool) {
+        return id == type(IERC6900ValidationModule).interfaceId || super.supportsInterface(id);
     }
 
     /* ──────────────────── Internal helper  ───────────────────────────── */
 
-    function _transferPasskey(uint32 entityId, P256PublicKey memory newKey)
-        internal
-    {
+    function _transferPasskey(uint32 entityId, P256PublicKey memory newKey) internal {
         P256PublicKey memory prev = passkeys[entityId][msg.sender];
         passkeys[entityId][msg.sender] = newKey;
         emit PasskeyTransferred(msg.sender, entityId, newKey, prev);

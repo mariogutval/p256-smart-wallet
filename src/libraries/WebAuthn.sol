@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT AND Apache-2.0
 pragma solidity ^0.8.20;
 
-import { Base64URL } from "./utils/Base64URL.sol";
-import { P256SCLVerifierLib } from "./P256SCLVerifierLib.sol";
+import {Base64URL} from "./utils/Base64URL.sol";
+import {P256SCLVerifierLib} from "./P256SCLVerifierLib.sol";
 
 /**
  * Helper library for external contracts to verify WebAuthn signatures.
@@ -123,17 +123,14 @@ library WebAuthn {
         uint256 s,
         uint256 x,
         uint256 y
-    )
-        internal
-        view
-        returns (bool)
-    {
+    ) internal view returns (bool) {
         // Check that authenticatorData has good flags
         if (authenticatorData.length < 37 || !checkAuthFlags(authenticatorData[32], requireUserVerification)) {
             return false;
         }
 
-        bytes memory clientDataJSON = abi.encodePacked(clientDataJSONPrefix, Base64URL.encode(challenge), clientDataJSONSuffix);
+        bytes memory clientDataJSON =
+            abi.encodePacked(clientDataJSONPrefix, Base64URL.encode(challenge), clientDataJSONSuffix);
 
         // Check that response is for an authentication assertion
         string memory responseType = '"type":"webauthn.get"';

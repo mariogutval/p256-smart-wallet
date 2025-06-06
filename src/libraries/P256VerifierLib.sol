@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT AND Apache-2.0
 pragma solidity ^0.8.20;
 
-import { WebAuthn } from "./WebAuthn.sol";
-import { P256SCLVerifierLib } from "./P256SCLVerifierLib.sol";
+import {WebAuthn} from "./WebAuthn.sol";
+import {P256SCLVerifierLib} from "./P256SCLVerifierLib.sol";
 
 struct DecodedWebAuthnSignature {
     uint256 r;
@@ -28,7 +28,11 @@ library P256VerifierLib {
      * @param _x The X coordinate of the public key that signed the message
      * @param _y The Y coordinate of the public key that signed the message
      */
-    function _verifyRawP256Signature(bytes32 _hash, bytes memory _signature, uint256 _x, uint256 _y) internal view returns (bool) {
+    function _verifyRawP256Signature(bytes32 _hash, bytes memory _signature, uint256 _x, uint256 _y)
+        internal
+        view
+        returns (bool)
+    {
         (uint256 r_, uint256 s_) = _decodeRawP256Signature(_signature);
         bytes32 messageHash_ = sha256(abi.encodePacked(_hash));
         return P256SCLVerifierLib.verifySignature(messageHash_, r_, s_, _x, _y);
@@ -45,12 +49,7 @@ library P256VerifierLib {
      * @param _x The X coordinate of the public key that signed the message
      * @param _y The Y coordinate of the public key that signed the message
      */
-    function _verifyWebAuthnP256Signature(
-        bytes32 _hash,
-        bytes memory _signature,
-        uint256 _x,
-        uint256 _y
-    )
+    function _verifyWebAuthnP256Signature(bytes32 _hash, bytes memory _signature, uint256 _x, uint256 _y)
         internal
         view
         returns (bool)
