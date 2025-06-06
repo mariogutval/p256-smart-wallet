@@ -4,3 +4,6 @@
 [submodule "lib/reference-implementation"]
 	path = lib/reference-implementation
 	url = https://github.com/erc6900/reference-implementation
+[submodule "lib/crypto-lib"]
+	path = lib/crypto-lib
+	url = https://github.com/get-smooth/crypto-lib

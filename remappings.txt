@@ -1,3 +1,4 @@
 @erc6900/reference-implementation/=lib/reference-implementation/src/
 @eth-infinitism/account-abstraction/=lib/reference-implementation/lib/account-abstraction/contracts/
 @openzeppelin/contracts/=lib/reference-implementation/lib/openzeppelin-contracts/contracts/
+@SCL/=lib/crypto-lib/src/
