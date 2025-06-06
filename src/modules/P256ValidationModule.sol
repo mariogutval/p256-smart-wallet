@@ -96,7 +96,7 @@ contract P256ValidationModule is IP256ValidationModule, ReplaySafeWrapper, BaseM
         bytes calldata, /* data       – unused */
         bytes calldata /* auth blob  – unused */
     ) external view override {
-        // Authorised iff caller is the account itself *or*
+        // Authorised if caller is the account itself *or*
         // the call is forwarded by the EntryPoint (which uses CALL not DELEGATECALL).
         if (sender != address(this) && sender != account) {
             revert NotAuthorized();

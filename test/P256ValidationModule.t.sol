@@ -10,17 +10,6 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {PackedUserOperation} from "@erc6900/reference-implementation/interfaces/IERC6900ValidationModule.sol";
 import {IERC6900ValidationModule} from "@erc6900/reference-implementation/interfaces/IERC6900ValidationModule.sol";
 
-// Dummy verifier contract to stub RIP-7212 precompile & fallback verifier for tests.
-contract DummyP256Verifier {
-    // Always return uint256(1) for any staticcall/fallback.
-    fallback() external payable {
-        assembly {
-            mstore(0x0, 1)
-            return(0x0, 0x20)
-        }
-    }
-}
-
 contract P256ValidationModuleTest is Test {
     using MessageHashUtils for bytes32;
 
@@ -38,14 +27,6 @@ contract P256ValidationModuleTest is Test {
     function setUp() public {
         validationModule = new P256ValidationModule();
         testAccount = makeAddr("testAccount");
-
-        // Deploy dummy verifier and copy its code to the addresses expected by the library.
-        DummyP256Verifier dummy = new DummyP256Verifier();
-        bytes memory verifierCode = address(dummy).code;
-        // RIP-7212 precompile address (0x100)
-        vm.etch(address(0x100), verifierCode);
-        // Solidity fallback verifier address used by Solady's P256 lib.
-        vm.etch(0x000000000000E052BBf2730c643462Afb680718A, verifierCode);
 
         // Initialize test passkey with example values
         testPasskey = P256PublicKey({
