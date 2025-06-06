@@ -5,8 +5,6 @@ import {SCL_RIP7212} from "@SCL/lib/libSCL_RIP7212.sol";
 import {ec_isOnCurve} from "@SCL/elliptic/SCL_ecOncurve.sol";
 import {a, b, p, n} from "@SCL/fields/SCL_secp256r1.sol";
 
-import {WebAuthn} from "./WebAuthn.sol";
-
 /**
  * @title P256SCLVerifierLib
  * @notice Provides functionality to verify the P256 signature utilizing the Smooth Crypto library

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
-import {DCAModule} from "../src/modules/DCAModule.sol";
+import {DCAModule} from "../../src/modules/DCAModule.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {IERC6900ExecutionModule} from "@erc6900/reference-implementation/interfaces/IERC6900ExecutionModule.sol";
@@ -104,16 +104,11 @@ contract DCAModuleTest is Test {
         // Create a DCA plan
         uint256 amount = 100 ether;
         uint256 interval = 1 days;
-        
+
         vm.expectEmit(true, false, false, true);
         emit PlanCreated(1, address(tokenIn), address(tokenOut));
-        
-        uint256 planId = dcaModule.createPlan(
-            address(tokenIn),
-            address(tokenOut),
-            amount,
-            interval
-        );
+
+        uint256 planId = dcaModule.createPlan(address(tokenIn), address(tokenOut), amount, interval);
 
         assertEq(planId, 1);
 
@@ -126,12 +121,7 @@ contract DCAModuleTest is Test {
         // Create a DCA plan
         uint256 amount = 100 ether;
         uint256 interval = 1 days;
-        uint256 planId = dcaModule.createPlan(
-            address(tokenIn),
-            address(tokenOut),
-            amount,
-            interval
-        );
+        uint256 planId = dcaModule.createPlan(address(tokenIn), address(tokenOut), amount, interval);
 
         // Approve tokens for the module
         tokenIn.approve(address(dcaModule), amount);
@@ -141,10 +131,10 @@ contract DCAModuleTest is Test {
 
         // Execute the plan
         bytes memory swapData = abi.encodeWithSelector(MockDEXRouter.swap.selector, "");
-        
+
         vm.expectEmit(true, false, false, false);
         emit PlanExecuted(planId);
-        
+
         dcaModule.executePlan(planId, address(dexRouter), swapData);
 
         vm.stopPrank();
@@ -154,17 +144,12 @@ contract DCAModuleTest is Test {
         vm.startPrank(testAccount);
 
         // Create a DCA plan
-        uint256 planId = dcaModule.createPlan(
-            address(tokenIn),
-            address(tokenOut),
-            100 ether,
-            1 days
-        );
+        uint256 planId = dcaModule.createPlan(address(tokenIn), address(tokenOut), 100 ether, 1 days);
 
         // Cancel the plan
         vm.expectEmit(true, false, false, false);
         emit PlanCancelled(planId);
-        
+
         dcaModule.cancelPlan(planId);
 
         vm.stopPrank();
@@ -174,12 +159,7 @@ contract DCAModuleTest is Test {
         vm.startPrank(testAccount);
 
         // Create a DCA plan
-        uint256 planId = dcaModule.createPlan(
-            address(tokenIn),
-            address(tokenOut),
-            100 ether,
-            1 days
-        );
+        uint256 planId = dcaModule.createPlan(address(tokenIn), address(tokenOut), 100 ether, 1 days);
 
         // Fast forward time to allow execution
         vm.warp(block.timestamp + 1 days);
@@ -198,12 +178,7 @@ contract DCAModuleTest is Test {
         vm.startPrank(testAccount);
 
         // Create a DCA plan with 1 day interval
-        uint256 planId = dcaModule.createPlan(
-            address(tokenIn),
-            address(tokenOut),
-            100 ether,
-            1 days
-        );
+        uint256 planId = dcaModule.createPlan(address(tokenIn), address(tokenOut), 100 ether, 1 days);
 
         // Try to execute immediately
         bytes memory swapData = abi.encodeWithSelector(MockDEXRouter.swap.selector, "");
@@ -218,12 +193,7 @@ contract DCAModuleTest is Test {
         vm.startPrank(testAccount);
 
         // Create and immediately cancel a plan
-        uint256 planId = dcaModule.createPlan(
-            address(tokenIn),
-            address(tokenOut),
-            100 ether,
-            1 days
-        );
+        uint256 planId = dcaModule.createPlan(address(tokenIn), address(tokenOut), 100 ether, 1 days);
         dcaModule.cancelPlan(planId);
 
         // Try to execute cancelled plan
@@ -237,14 +207,14 @@ contract DCAModuleTest is Test {
 
     function test_WhitelistDex() public {
         address newDex = makeAddr("newDex");
-        
+
         dcaModule.whitelistDex(newDex);
         assertTrue(dcaModule.dexWhitelist(newDex));
     }
 
     function test_UnwhitelistDex() public {
         address dex = makeAddr("dex");
-        
+
         dcaModule.whitelistDex(dex);
         dcaModule.unwhitelistDex(dex);
         assertFalse(dcaModule.dexWhitelist(dex));

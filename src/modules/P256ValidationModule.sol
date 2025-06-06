@@ -16,6 +16,7 @@ import {BaseModule} from "@erc6900/reference-implementation/modules/BaseModule.s
 /* ─── Signature helpers – same lib you already used in your PoC ─────────── */
 import {P256VerifierLib} from "../libraries/P256VerifierLib.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {console} from "forge-std/console.sol";
 
 /* ───────────────────────────── Contract ──────────────────────────────── */
 /// @title P-256 (WebAuthn) Validation Module

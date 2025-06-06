@@ -2,13 +2,14 @@
 pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
-import {P256ValidationModule} from "../src/modules/P256ValidationModule.sol";
-import {IP256ValidationModule} from "../src/modules/IP256ValidationModule.sol";
-import {P256PublicKey} from "../src/utils/Types.sol";
-import {P256VerifierLib} from "../src/libraries/P256VerifierLib.sol";
+import {P256ValidationModule} from "../../src/modules/P256ValidationModule.sol";
+import {IP256ValidationModule} from "../../src/modules/IP256ValidationModule.sol";
+import {P256PublicKey} from "../../src/utils/Types.sol";
+import {P256VerifierLib} from "../../src/libraries/P256VerifierLib.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {PackedUserOperation} from "@erc6900/reference-implementation/interfaces/IERC6900ValidationModule.sol";
 import {IERC6900ValidationModule} from "@erc6900/reference-implementation/interfaces/IERC6900ValidationModule.sol";
+import {SigningUtilsLib} from "../helpers/SigningUtilsLib.sol";
 
 contract P256ValidationModuleTest is Test {
     using MessageHashUtils for bytes32;
@@ -24,15 +25,17 @@ contract P256ValidationModuleTest is Test {
         address indexed account, uint32 indexed entityId, P256PublicKey newKey, P256PublicKey prevKey
     );
 
+    /* deterministic key: priv = 1 */
+    uint256 constant PRIV_KEY = 1;
+    P256PublicKey public PASSKEY = P256PublicKey({
+        x: 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296,
+        y: 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5
+    });
+
     function setUp() public {
         validationModule = new P256ValidationModule();
         testAccount = makeAddr("testAccount");
-
-        // Initialize test passkey with example values
-        testPasskey = P256PublicKey({
-            x: 0x1234567890123456789012345678901234567890123456789012345678901234,
-            y: 0x2345678901234567890123456789012345678901234567890123456789012345
-        });
+        testPasskey = PASSKEY;
     }
 
     function test_TransferPasskey() public {
@@ -138,15 +141,17 @@ contract P256ValidationModuleTest is Test {
         vm.startPrank(testAccount);
 
         // First install a passkey
-        validationModule.transferPasskey(TEST_ENTITY_ID, testPasskey);
+        validationModule.transferPasskey(TEST_ENTITY_ID, PASSKEY);
 
         // Create a test message and hash
         bytes32 messageHash = keccak256("test message");
         bytes32 digest = messageHash.toEthSignedMessageHash();
 
-        // Note: In a real test, we would need to generate a valid P-256 signature
-        // This is just a placeholder for the signature bytes
-        bytes memory signature = new bytes(96); // placeholder but properly sized for abi.decode
+        // The module will internally compute replaySafeHash(account, ethDigest)
+        bytes32 wrapped = keccak256(abi.encode(testAccount, digest));
+
+        // Sign the wrapped hash
+        bytes memory signature = SigningUtilsLib.signHashP256(PRIV_KEY, wrapped);
 
         // Test signature validation
         bytes4 result = validationModule.validateSignature(
@@ -157,9 +162,7 @@ contract P256ValidationModuleTest is Test {
             signature
         );
 
-        // Note: The actual result will depend on the signature validity
-        // This test needs to be updated with a valid signature
-        assertTrue(result == 0x1626ba7e || result == 0xffffffff);
+        assertTrue(result == 0x1626ba7e);
 
         vm.stopPrank();
     }

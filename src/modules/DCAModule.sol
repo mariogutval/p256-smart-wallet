@@ -11,18 +11,18 @@ import {
 import {BaseModule} from "@erc6900/reference-implementation/modules/BaseModule.sol";
 
 /* ───── OpenZeppelin helpers ──────────────────────────────────────────── */
-import {IERC165}          from "@openzeppelin/contracts/interfaces/IERC165.sol";
-import {IERC20}           from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20}        from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /* ───── Types ─────────────────────────────────────────────────────────── */
 struct DCAPlan {
     address tokenIn;
     address tokenOut;
-    uint256 amount;        // tokens per interval
-    uint256 interval;      // seconds
-    uint256 nextExec;      // timestamp
-    bool    active;
+    uint256 amount; // tokens per interval
+    uint256 interval; // seconds
+    uint256 nextExec; // timestamp
+    bool active;
 }
 
 /* ───────────────────────── Module ────────────────────────────────────── */
@@ -35,11 +35,12 @@ contract DCAModule is IERC6900ExecutionModule, BaseModule {
 
     /* ─────────────────── Storage (plain mappings) ────────────────────── */
     uint256 internal _planCount;
-    mapping(uint256 id => DCAPlan)         internal _plans;
+    mapping(uint256 id => DCAPlan) internal _plans;
     mapping(address dex => bool whitelisted) public dexWhitelist;
 
     /* ─────────────────── Re-entrancy guard ───────────────────────────── */
     uint256 private _lock;
+
     modifier nonReentrant() {
         require(_lock == 0, "DCA: re-entrancy");
         _lock = 1;
@@ -48,48 +49,36 @@ contract DCAModule is IERC6900ExecutionModule, BaseModule {
     }
 
     /* ───────────────────── Events ────────────────────────────────────── */
-    event PlanCreated  (uint256 indexed id, address tokenIn, address tokenOut);
-    event PlanExecuted (uint256 indexed id);
+    event PlanCreated(uint256 indexed id, address tokenIn, address tokenOut);
+    event PlanExecuted(uint256 indexed id);
     event PlanCancelled(uint256 indexed id);
 
     /* ───────────────────── Public API  ───────────────────────────────── */
 
     /// Create a new DCA plan.
-    function createPlan(
-        address tokenIn,
-        address tokenOut,
-        uint256 amount,
-        uint256 everySeconds
-    )
+    function createPlan(address tokenIn, address tokenOut, uint256 amount, uint256 everySeconds)
         external
         returns (uint256 id)
     {
         id = ++_planCount;
         _plans[id] = DCAPlan({
-            tokenIn:   tokenIn,
-            tokenOut:  tokenOut,
-            amount:    amount,
-            interval:  everySeconds,
-            nextExec:  block.timestamp + everySeconds,
-            active:    true
+            tokenIn: tokenIn,
+            tokenOut: tokenOut,
+            amount: amount,
+            interval: everySeconds,
+            nextExec: block.timestamp + everySeconds,
+            active: true
         });
         emit PlanCreated(id, tokenIn, tokenOut);
     }
 
     /// Execute a plan via a whitelisted router (`swapData` must spend `amount` once).
-    function executePlan(
-        uint256 id,
-        address dexRouter,
-        bytes calldata swapData
-    )
-        external
-        nonReentrant
-    {
+    function executePlan(uint256 id, address dexRouter, bytes calldata swapData) external nonReentrant {
         DCAPlan storage p = _plans[id];
 
-        require(p.active,               "DCA: inactive");
+        require(p.active, "DCA: inactive");
         require(block.timestamp >= p.nextExec, "DCA: too early");
-        require(dexWhitelist[dexRouter],        "DCA: DEX not whitelisted");
+        require(dexWhitelist[dexRouter], "DCA: DEX not whitelisted");
 
         // Approve router to pull `amount`
         IERC20(p.tokenIn).safeIncreaseAllowance(dexRouter, p.amount);
@@ -110,8 +99,13 @@ contract DCAModule is IERC6900ExecutionModule, BaseModule {
     }
 
     /// Manage router allow-list.
-    function whitelistDex(address dex)     external { dexWhitelist[dex] = true; }
-    function unwhitelistDex(address dex)   external { dexWhitelist[dex] = false; }
+    function whitelistDex(address dex) external {
+        dexWhitelist[dex] = true;
+    }
+
+    function unwhitelistDex(address dex) external {
+        dexWhitelist[dex] = false;
+    }
 
     /* ─────────────────── IERC6900Module surface  ─────────────────────── */
 
@@ -142,32 +136,32 @@ contract DCAModule is IERC6900ExecutionModule, BaseModule {
 
         m.executionFunctions[0] = ManifestExecutionFunction({
             executionSelector: DCAModule.createPlan.selector,
-            skipRuntimeValidation: false,       // must be authorised
-            allowGlobalValidation:  true        // let the account’s global runtime-validator check it
+            skipRuntimeValidation: false, // must be authorised
+            allowGlobalValidation: true // let the account’s global runtime-validator check it
         });
 
         m.executionFunctions[1] = ManifestExecutionFunction({
             executionSelector: DCAModule.executePlan.selector,
             skipRuntimeValidation: false,
-            allowGlobalValidation:  true
+            allowGlobalValidation: true
         });
 
         m.executionFunctions[2] = ManifestExecutionFunction({
             executionSelector: DCAModule.cancelPlan.selector,
             skipRuntimeValidation: false,
-            allowGlobalValidation:  true
+            allowGlobalValidation: true
         });
 
         m.executionFunctions[3] = ManifestExecutionFunction({
             executionSelector: DCAModule.whitelistDex.selector,
             skipRuntimeValidation: false,
-            allowGlobalValidation:  true
+            allowGlobalValidation: true
         });
 
         m.executionFunctions[4] = ManifestExecutionFunction({
             executionSelector: DCAModule.unwhitelistDex.selector,
             skipRuntimeValidation: false,
-            allowGlobalValidation:  true
+            allowGlobalValidation: true
         });
 
         // 2. hooks --------------------------------------------------
@@ -179,15 +173,8 @@ contract DCAModule is IERC6900ExecutionModule, BaseModule {
         m.interfaceIds = new bytes4[](0);
     }
 
-
     /* ───────────── supportsInterface (ERC-165) ───────────────────────── */
-    function supportsInterface(bytes4 id)
-        public
-        view
-        override(BaseModule, IERC165)
-        returns (bool)
-    {
-        return id == type(IERC6900ExecutionModule).interfaceId
-            || super.supportsInterface(id);
+    function supportsInterface(bytes4 id) public view override(BaseModule, IERC165) returns (bool) {
+        return id == type(IERC6900ExecutionModule).interfaceId || super.supportsInterface(id);
     }
 }
