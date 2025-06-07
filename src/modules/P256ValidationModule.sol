@@ -90,7 +90,7 @@ contract P256ValidationModule is IP256ValidationModule, ReplaySafeWrapper, BaseM
     /// @inheritdoc IERC6900ValidationModule
     function validateRuntime(
         address account,
-        uint32 entityId,
+        uint32,
         address sender,
         uint256, /* value      – unused */
         bytes calldata, /* data       – unused */
@@ -107,15 +107,12 @@ contract P256ValidationModule is IP256ValidationModule, ReplaySafeWrapper, BaseM
     function validateSignature(
         address account,
         uint32 entityId,
-        address sender,
+        address,
         bytes32 messageHash,
         bytes calldata signature
     ) public view override returns (bytes4) {
         // Get the public key for this entity
         P256PublicKey memory key = passkeys[entityId][account];
-
-        // Create replay-safe hash
-        bytes32 replaySafeHash = replaySafeHash(account, messageHash);
 
         // Verify the signature
         bool isValid = P256VerifierLib._verifyRawP256Signature(

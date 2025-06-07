@@ -88,12 +88,12 @@ contract P256ValidationModuleTest is BaseTest {
         vm.stopPrank();
     }
 
-    function test_ModuleId() public {
+    function test_ModuleId() public view {
         string memory id = validationModule.moduleId();
         assertEq(id, "erc6900.p256-validation-module.1.0.0");
     }
 
-    function test_SupportsInterface() public {
+    function test_SupportsInterface() public view {
         // Test ERC165 interface support
         assertTrue(validationModule.supportsInterface(0x01ffc9a7)); // IERC165
         // IERC6900ValidationModule interface id
@@ -146,9 +146,6 @@ contract P256ValidationModuleTest is BaseTest {
 
         // Create a valid signature
         bytes memory signature = SigningUtilsLib.signHashP256(testUser.privateKey, messageHash);
-
-        // Create a replay-safe hash
-        bytes32 replaySafeHash = validationModule.replaySafeHash(testUser.addr, messageHash);
 
         // Validate the signature
         bytes4 result = validationModule.validateSignature(

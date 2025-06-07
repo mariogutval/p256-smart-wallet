@@ -66,7 +66,7 @@ contract MockERC20 is IERC20 {
 }
 
 contract MockDEXRouter {
-    function swap(bytes calldata) external returns (bool) {
+    function swap(bytes calldata) external pure returns (bool) {
         return true;
     }
 }
@@ -89,12 +89,9 @@ contract MockEntryPoint is IEntryPoint {
         ));
     }
 
-    function handleOps(PackedUserOperation[] calldata ops, address payable beneficiary) external {
+    function handleOps(PackedUserOperation[] calldata ops, address payable) external {
         for (uint256 i = 0; i < ops.length; i++) {
             PackedUserOperation calldata userOp = ops[i];
-            
-            // Simple validation - check that the operation is properly signed
-            bytes32 userOpHash = this.getUserOpHash(userOp);
             
             // Call the account directly with the callData
             (bool success, bytes memory result) = userOp.sender.call(userOp.callData);
@@ -120,12 +117,12 @@ contract MockEntryPoint is IEntryPoint {
     function withdrawStake(address payable withdrawAddress) external {}
     function depositTo(address account) external payable {}
     function withdrawTo(address payable withdrawAddress, uint256 withdrawAmount) external {}
-    function balanceOf(address account) external view returns (uint256) { return 0; }
-    function getDepositInfo(address account) external view returns (DepositInfo memory info) {}
-    function getNonce(address sender, uint192 key) external view returns (uint256 nonce) { return 0; }
-    function incrementNonce(uint192 key) external {}
-    function getSenderAddress(bytes memory initCode) external {}
-    function delegateAndRevert(address target, bytes memory data) external {}
+    function balanceOf(address) external pure returns (uint256) { return 0; }
+    function getDepositInfo(address) external pure returns (DepositInfo memory) {}
+    function getNonce(address, uint192) external pure returns (uint256) { return 0; }
+    function incrementNonce(uint192) external {}
+    function getSenderAddress(bytes memory) external pure {}
+    function delegateAndRevert(address, bytes memory) external {}
 
     struct ValidationResult {
         ReturnInfo returnInfo;

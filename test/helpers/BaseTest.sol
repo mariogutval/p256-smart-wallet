@@ -117,7 +117,7 @@ contract MockDEXRouter {
         shouldReenter = _shouldReenter;
     }
 
-    function swap(bytes calldata) external returns (bool) {
+    function swap(bytes calldata) external view returns (bool) {
         if (shouldFail) {
             revert("DEX: swap failed");
         }
