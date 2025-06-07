@@ -10,19 +10,36 @@ import {ReferenceModularAccount} from "@erc6900/reference-implementation/account
 import {ValidationConfigLib} from "@erc6900/reference-implementation/libraries/ValidationConfigLib.sol";
 import {P256PublicKey} from "../utils/Types.sol";
 
-/// @notice Factory that deploys a **ReferenceModularAccount**
-///         pre-loaded with the `P256ValidationModule`.
+/// @title P256AccountFactory
+/// @notice Factory that deploys a ReferenceModularAccount pre-loaded with the P256ValidationModule
+/// @dev This factory creates accounts with P256 validation module pre-installed and handles EntryPoint staking
 contract P256AccountFactory is Ownable {
     /* -------------------------------------------------------------------- */
     /*  Immutable params                                                    */
     /* -------------------------------------------------------------------- */
+    /// @notice The EntryPoint contract used for account abstraction
     IEntryPoint public immutable ENTRY_POINT;
+
+    /// @notice The implementation of the modular account
     ReferenceModularAccount public immutable ACCOUNT_IMPL;
+
+    /// @notice The hash of the proxy bytecode for deterministic address computation
     bytes32 private immutable _PROXY_BYTECODE_HASH;
+
+    /// @notice The address of the P256 validation module
     address public immutable P256_VALIDATION_MODULE;
 
+    /// @notice Emitted when a new modular account is deployed
+    /// @param account The address of the deployed account
+    /// @param passkeyHash The hash of the passkey used for validation
+    /// @param salt The salt used for deterministic address computation
     event ModularAccountDeployed(address indexed account, bytes32 indexed passkeyHash, uint256 salt);
 
+    /// @notice Creates a new factory with the given parameters
+    /// @param _entryPoint The EntryPoint contract
+    /// @param _accountImpl The implementation of the modular account
+    /// @param _p256ValidationModule The address of the P256 validation module
+    /// @param factoryOwner The owner of the factory contract
     constructor(
         IEntryPoint _entryPoint,
         ReferenceModularAccount _accountImpl,
@@ -40,9 +57,11 @@ contract P256AccountFactory is Ownable {
     /* -------------------------------------------------------------------- */
     /*  Deploy or return a counterfactual address                            */
     /* -------------------------------------------------------------------- */
-    /// @param salt        arbitrary salt that lets the user pre-compute addr.
-    /// @param entityId    ERC-6900 entity namespace for the user’s key.
-    /// @param passkey     raw secp256r1 public key `{x,y}` (same struct as lib).
+    /// @notice Creates a new modular account or returns an existing one
+    /// @param salt Arbitrary salt that lets the user pre-compute address
+    /// @param entityId ERC-6900 entity namespace for the user's key
+    /// @param passkey Raw secp256r1 public key {x,y}
+    /// @return wallet The deployed or existing modular account
     function createAccount(uint256 salt, uint32 entityId, P256PublicKey calldata passkey)
         external
         returns (ReferenceModularAccount wallet)
@@ -75,14 +94,19 @@ contract P256AccountFactory is Ownable {
     }
 
     /* ------------------------- EntryPoint stake helpers ------------------ */
+    /// @notice Adds stake to the EntryPoint contract
+    /// @param unstakeDelay The delay before stake can be withdrawn
     function addStake(uint32 unstakeDelay) external payable onlyOwner {
         ENTRY_POINT.addStake{value: msg.value}(unstakeDelay);
     }
 
+    /// @notice Unlocks the stake in the EntryPoint contract
     function unlockStake() external onlyOwner {
         ENTRY_POINT.unlockStake();
     }
 
+    /// @notice Withdraws the stake from the EntryPoint contract
+    /// @param to The address to receive the withdrawn stake
     function withdrawStake(address payable to) external onlyOwner {
         ENTRY_POINT.withdrawStake(to);
     }

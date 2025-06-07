@@ -19,21 +19,30 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IDCAModule} from "./IDCAModule.sol";
 
 /* ───────────────────────── Module ────────────────────────────────────── */
-/// @title  DCA Execution Module (ERC-6900)
+/// @title DCA Execution Module (ERC-6900)
 /// @author Community
 /// @notice Stores recurring swap plans inside the smart-wallet's storage and
-///         executes them through whitelisted DEX routers.
+///         executes them through whitelisted DEX routers
+/// @dev This module implements the IDCAModule interface and provides functionality
+///      for creating and managing recurring token swap plans
 contract DCAModule is IDCAModule, BaseModule {
     using SafeERC20 for IERC20;
 
     /* ─────────────────── Storage (plain mappings) ────────────────────── */
+    /// @notice Counter for generating unique plan IDs
     uint256 internal _planCount;
+
+    /// @notice Mapping of plan IDs to their details
     mapping(uint256 id => Plan) internal _plans;
+
+    /// @notice Mapping of DEX router addresses to their whitelist status
     mapping(address dex => bool whitelisted) public override dexWhitelist;
 
     /* ─────────────────── Re-entrancy guard ───────────────────────────── */
+    /// @notice Re-entrancy guard state
     uint256 private _lock;
 
+    /// @notice Prevents re-entrancy attacks
     modifier nonReentrant() {
         require(_lock == 0, "DCA: re-entrancy");
         _lock = 1;
@@ -43,7 +52,12 @@ contract DCAModule is IDCAModule, BaseModule {
 
     /* ───────────────────── Public API  ───────────────────────────────── */
 
-    /// Create a new DCA plan.
+    /// @notice Create a new DCA plan
+    /// @param tokenIn The address of the input token
+    /// @param tokenOut The address of the output token
+    /// @param amount The amount of input tokens to swap in each execution
+    /// @param everySeconds The time interval between executions in seconds
+    /// @return id The unique identifier of the created plan
     function createPlan(
         address tokenIn,
         address tokenOut,
@@ -65,7 +79,10 @@ contract DCAModule is IDCAModule, BaseModule {
         emit PlanCreated(id, tokenIn, tokenOut);
     }
 
-    /// Execute a plan via a whitelisted router (`swapData` must spend `amount` once).
+    /// @notice Execute a plan via a whitelisted router (`swapData` must spend `amount` once)
+    /// @param id The unique identifier of the plan to execute
+    /// @param dexRouter The address of the DEX router to use
+    /// @param swapData The calldata for the swap operation
     function executePlan(
         uint256 id,
         address dexRouter,
@@ -89,44 +106,60 @@ contract DCAModule is IDCAModule, BaseModule {
         emit PlanExecuted(id);
     }
 
-    /// Cancel a plan permanently.
+    /// @notice Cancel a plan permanently
+    /// @param id The unique identifier of the plan to cancel
     function cancelPlan(uint256 id) external override {
         if (!_plans[id].active) revert PlanInactive();
         _plans[id].active = false;
         emit PlanCancelled(id);
     }
 
-    /// Manage router allow-list.
+    /// @notice Manage router allow-list
+    /// @param dex The address of the DEX router to whitelist
     function whitelistDex(address dex) external override {
         dexWhitelist[dex] = true;
         emit DexWhitelisted(dex);
     }
 
+    /// @notice Remove a DEX router from the whitelist
+    /// @param dex The address of the DEX router to remove
     function unwhitelistDex(address dex) external override {
         dexWhitelist[dex] = false;
         emit DexUnwhitelisted(dex);
     }
 
     /* ─────────────────── View functions ─────────────────────────────── */
+    /// @notice Get the details of a DCA plan
+    /// @param planId The unique identifier of the plan
+    /// @return The plan details
     function plans(uint256 planId) external view override returns (Plan memory) {
         return _plans[planId];
     }
 
+    /// @notice Get the next available plan ID
+    /// @return The next plan ID
     function nextPlanId() external view override returns (uint256) {
         return _planCount + 1;
     }
 
     /* ─────────────────── IERC6900Module surface  ─────────────────────── */
 
-    /// @dev Execution-only module – not a validator.
+    /// @notice Execution-only module – not a validator
+    /// @dev No-op implementation as this is an execution module
     function onInstall(bytes calldata) external override { /* no-op */ }
+
+    /// @notice Execution-only module – not a validator
+    /// @dev No-op implementation as this is an execution module
     function onUninstall(bytes calldata) external override { /* no-op */ }
 
+    /// @notice Get the module ID
+    /// @return The module ID string
     function moduleId() external pure override returns (string memory) {
         return "erc6900.dca-execution-module.1.0.0";
     }
 
-    /// Return the function selectors this module owns (needed by the account).
+    /// @notice Return the function selectors this module owns (needed by the account)
+    /// @return s Array of function selectors
     function selectors() external pure returns (bytes4[] memory s) {
         s = new bytes4[](5);
         s[0] = this.createPlan.selector;
@@ -139,6 +172,8 @@ contract DCAModule is IDCAModule, BaseModule {
     // ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
     // ┃ IERC6900ExecutionModule – mandatory manifest declaration    ┃
     // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+    /// @notice Get the execution manifest for this module
+    /// @return m The execution manifest
     function executionManifest() external pure override returns (ExecutionManifest memory m) {
         // 1. execution selectors -----------------------------------
         m.executionFunctions = new ManifestExecutionFunction[](5);
@@ -183,6 +218,9 @@ contract DCAModule is IDCAModule, BaseModule {
     }
 
     /* ───────────── supportsInterface (ERC-165) ───────────────────────── */
+    /// @notice Check if the contract supports a specific interface
+    /// @param id The interface ID to check
+    /// @return Whether the interface is supported
     function supportsInterface(bytes4 id) public view override(BaseModule, IERC165) returns (bool) {
         return id == type(IERC6900ExecutionModule).interfaceId || 
                id == type(IDCAModule).interfaceId || 
