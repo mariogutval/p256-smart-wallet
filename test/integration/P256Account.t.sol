@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-// Forge imports
-import {console} from "forge-std/console.sol";
-
 // OpenZeppelin imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -127,10 +124,6 @@ contract P256AccountTest is BaseTest {
             allowGlobalValidation: true
         });
 
-        // Debug logs for DCA module
-        console.log("Installing DCA module via EntryPoint...");
-        console.log("DCAModule address:", address(dcaModule));
-
         // Step 3: call installExecution from the EntryPoint (bypasses native validation)
         vm.prank(address(entryPoint));
         account.installExecution(
@@ -178,12 +171,6 @@ contract P256AccountTest is BaseTest {
             allowGlobalValidation: true
         });
 
-        // Debug logs
-        console.log("DCAModule address:", address(dcaModule));
-        console.log("ValidationModule address:", address(validationModule));
-        console.log("Account address:", address(account));
-        console.log("Number of functions:", functions.length);
-
         vm.stopPrank(); // Stop user prank before EntryPoint prank
 
         // Install DCAModule via EntryPoint
@@ -203,13 +190,6 @@ contract P256AccountTest is BaseTest {
         uint256 amount = 100 ether;
         uint256 interval = 1 days;
         uint256 planId = dcaModule.createPlan(address(tokenIn), address(tokenOut), amount, interval);
-
-        // Debug logs for DCA plan
-        console.log("Plan ID:", planId);
-        console.log("Token In address:", address(tokenIn));
-        console.log("Token Out address:", address(tokenOut));
-        console.log("Amount:", amount);
-        console.log("Interval:", interval);
 
         // Approve tokens for DCA module
         tokenIn.approve(address(dcaModule), amount);
