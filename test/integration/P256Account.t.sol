@@ -7,7 +7,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // ERC6900 imports
 import {ReferenceModularAccount} from "@erc6900/reference-implementation/account/ReferenceModularAccount.sol";
 import {PackedUserOperation} from "@erc6900/reference-implementation/interfaces/IERC6900ValidationModule.sol";
-import {ExecutionManifest, ManifestExecutionFunction, ManifestExecutionHook} from "@erc6900/reference-implementation/interfaces/IERC6900ExecutionModule.sol";
+import {
+    ExecutionManifest,
+    ManifestExecutionFunction,
+    ManifestExecutionHook
+} from "@erc6900/reference-implementation/interfaces/IERC6900ExecutionModule.sol";
 
 // Account Abstraction imports
 import {IEntryPoint} from "@eth-infinitism/account-abstraction/interfaces/IEntryPoint.sol";
@@ -59,12 +63,7 @@ contract P256AccountTest is BaseTest {
         ReferenceModularAccount accountImpl = new ReferenceModularAccount(entryPoint);
 
         // Deploy factory
-        factory = new P256AccountFactory(
-            entryPoint,
-            accountImpl,
-            address(validationModule),
-            address(this)
-        );
+        factory = new P256AccountFactory(entryPoint, accountImpl, address(validationModule), address(this));
 
         // Whitelist DEX
         dcaModule.whitelistDex(address(dexRouter));
@@ -199,21 +198,14 @@ contract P256AccountTest is BaseTest {
 
         // Create and sign user operation
         bytes memory swapData = abi.encodeWithSelector(MockDEXRouter.swap.selector, "");
-        bytes memory executePlanData = abi.encodeWithSelector(
-            dcaModule.executePlan.selector,
-            planId,
-            address(dexRouter),
-            swapData
-        );
+        bytes memory executePlanData =
+            abi.encodeWithSelector(dcaModule.executePlan.selector, planId, address(dexRouter), swapData);
 
         PackedUserOperation memory userOp = PackedUserOperation({
             sender: address(account),
             nonce: 0,
             initCode: "",
-            callData: abi.encodeCall(
-                ReferenceModularAccount.execute,
-                (address(dcaModule), 0, executePlanData)
-            ),
+            callData: abi.encodeCall(ReferenceModularAccount.execute, (address(dcaModule), 0, executePlanData)),
             accountGasLimits: bytes32(0),
             preVerificationGas: 0,
             gasFees: bytes32(0),
@@ -231,7 +223,7 @@ contract P256AccountTest is BaseTest {
         // The signature should be wrapped with the validation module and entity ID
         bytes memory encodedSignature = abi.encodePacked(
             address(validationModule), // validation module address
-            uint32(DEFAULT_ENTITY_ID), // entity ID  
+            uint32(DEFAULT_ENTITY_ID), // entity ID
             uint8(0), // validation mode (global validation)
             signature // actual P256 signature
         );

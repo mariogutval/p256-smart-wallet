@@ -102,14 +102,11 @@ contract P256ValidationModule is IP256ValidationModule, ReplaySafeWrapper, BaseM
     /// @notice Validate a runtime call
     /// @param account The account making the call
     /// @param sender The address making the call
-    function validateRuntime(
-        address account,
-        uint32,
-        address sender,
-        uint256,
-        bytes calldata,
-        bytes calldata
-    ) external view override {
+    function validateRuntime(address account, uint32, address sender, uint256, bytes calldata, bytes calldata)
+        external
+        view
+        override
+    {
         // Authorised if caller is the account itself *or*
         // the call is forwarded by the EntryPoint (which uses CALL not DELEGATECALL).
         if (sender != address(this) && sender != account) {
@@ -123,23 +120,17 @@ contract P256ValidationModule is IP256ValidationModule, ReplaySafeWrapper, BaseM
     /// @param messageHash The hash of the message being signed
     /// @param signature The signature to validate
     /// @return The magic value if the signature is valid, invalid value otherwise
-    function validateSignature(
-        address account,
-        uint32 entityId,
-        address,
-        bytes32 messageHash,
-        bytes calldata signature
-    ) public view override returns (bytes4) {
+    function validateSignature(address account, uint32 entityId, address, bytes32 messageHash, bytes calldata signature)
+        public
+        view
+        override
+        returns (bytes4)
+    {
         // Get the public key for this entity
         P256PublicKey memory key = passkeys[entityId][account];
 
         // Verify the signature
-        bool isValid = P256VerifierLib._verifyRawP256Signature(
-            messageHash,
-            signature,
-            key.x,
-            key.y
-        );
+        bool isValid = P256VerifierLib._verifyRawP256Signature(messageHash, signature, key.x, key.y);
 
         return isValid ? _1271_MAGIC_VALUE : _1271_INVALID;
     }

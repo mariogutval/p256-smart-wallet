@@ -7,7 +7,11 @@ import {console2} from "forge-std/console2.sol";
 
 // ERC6900 imports
 import {ReferenceModularAccount} from "@erc6900/reference-implementation/account/ReferenceModularAccount.sol";
-import {ExecutionManifest, ManifestExecutionFunction, ManifestExecutionHook} from "@erc6900/reference-implementation/interfaces/IERC6900ExecutionModule.sol";
+import {
+    ExecutionManifest,
+    ManifestExecutionFunction,
+    ManifestExecutionHook
+} from "@erc6900/reference-implementation/interfaces/IERC6900ExecutionModule.sol";
 
 // Account Abstraction imports
 import {IEntryPoint} from "@eth-infinitism/account-abstraction/interfaces/IEntryPoint.sol";

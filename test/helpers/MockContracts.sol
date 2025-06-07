@@ -73,29 +73,33 @@ contract MockDEXRouter {
 
 contract MockEntryPoint is IEntryPoint {
     function getUserOpHash(PackedUserOperation calldata userOp) external view returns (bytes32) {
-        return keccak256(abi.encode(
-            keccak256(abi.encode(
-                userOp.sender,
-                userOp.nonce,
-                keccak256(userOp.initCode),
-                keccak256(userOp.callData),
-                userOp.accountGasLimits,
-                userOp.preVerificationGas,
-                userOp.gasFees,
-                keccak256(userOp.paymasterAndData)
-            )),
-            address(this),
-            block.chainid
-        ));
+        return keccak256(
+            abi.encode(
+                keccak256(
+                    abi.encode(
+                        userOp.sender,
+                        userOp.nonce,
+                        keccak256(userOp.initCode),
+                        keccak256(userOp.callData),
+                        userOp.accountGasLimits,
+                        userOp.preVerificationGas,
+                        userOp.gasFees,
+                        keccak256(userOp.paymasterAndData)
+                    )
+                ),
+                address(this),
+                block.chainid
+            )
+        );
     }
 
     function handleOps(PackedUserOperation[] calldata ops, address payable) external {
         for (uint256 i = 0; i < ops.length; i++) {
             PackedUserOperation calldata userOp = ops[i];
-            
+
             // Call the account directly with the callData
             (bool success, bytes memory result) = userOp.sender.call(userOp.callData);
-            
+
             if (!success) {
                 // If it failed, try to bubble up the revert reason
                 if (result.length > 0) {
@@ -109,17 +113,33 @@ contract MockEntryPoint is IEntryPoint {
         }
     }
 
-    function handleAggregatedOps(UserOpsPerAggregator[] calldata opsPerAggregator, address payable beneficiary) external {}
-    function simulateValidation(PackedUserOperation calldata userOp) external returns (ValidationResult memory result) {}
-    function simulateHandleOp(PackedUserOperation calldata op, address target, bytes calldata targetCallData) external returns (ExecutionResult memory result) {}
+    function handleAggregatedOps(UserOpsPerAggregator[] calldata opsPerAggregator, address payable beneficiary)
+        external
+    {}
+    function simulateValidation(PackedUserOperation calldata userOp)
+        external
+        returns (ValidationResult memory result)
+    {}
+    function simulateHandleOp(PackedUserOperation calldata op, address target, bytes calldata targetCallData)
+        external
+        returns (ExecutionResult memory result)
+    {}
     function addStake(uint32 unstakeDelaySec) external payable {}
     function unlockStake() external {}
     function withdrawStake(address payable withdrawAddress) external {}
     function depositTo(address account) external payable {}
     function withdrawTo(address payable withdrawAddress, uint256 withdrawAmount) external {}
-    function balanceOf(address) external pure returns (uint256) { return 0; }
+
+    function balanceOf(address) external pure returns (uint256) {
+        return 0;
+    }
+
     function getDepositInfo(address) external pure returns (DepositInfo memory) {}
-    function getNonce(address, uint192) external pure returns (uint256) { return 0; }
+
+    function getNonce(address, uint192) external pure returns (uint256) {
+        return 0;
+    }
+
     function incrementNonce(uint192) external {}
     function getSenderAddress(bytes memory) external pure {}
     function delegateAndRevert(address, bytes memory) external {}
@@ -139,4 +159,4 @@ contract MockEntryPoint is IEntryPoint {
         bool targetSuccess;
         bytes targetResult;
     }
-} 
+}

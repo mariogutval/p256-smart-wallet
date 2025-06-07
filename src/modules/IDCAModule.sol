@@ -74,22 +74,15 @@ interface IDCAModule is IERC165, IERC6900ExecutionModule {
     /// @param amount The amount of input tokens to swap in each execution
     /// @param interval The time interval between executions in seconds
     /// @return planId The unique identifier of the created plan
-    function createPlan(
-        address tokenIn,
-        address tokenOut,
-        uint256 amount,
-        uint256 interval
-    ) external returns (uint256 planId);
+    function createPlan(address tokenIn, address tokenOut, uint256 amount, uint256 interval)
+        external
+        returns (uint256 planId);
 
     /// @notice Executes a DCA plan through a whitelisted DEX router
     /// @param planId The unique identifier of the plan to execute
     /// @param dex The address of the DEX router to use
     /// @param swapData The calldata for the swap operation
-    function executePlan(
-        uint256 planId,
-        address dex,
-        bytes calldata swapData
-    ) external;
+    function executePlan(uint256 planId, address dex, bytes calldata swapData) external;
 
     /// @notice Cancels an active DCA plan
     /// @param planId The unique identifier of the plan to cancel
@@ -117,4 +110,4 @@ interface IDCAModule is IERC165, IERC6900ExecutionModule {
     /// @notice Gets the next available plan ID
     /// @return The next plan ID
     function nextPlanId() external view returns (uint256);
-} 
+}

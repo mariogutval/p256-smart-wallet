@@ -5,7 +5,10 @@ pragma solidity ^0.8.20;
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 
 // ERC6900 imports
-import {IERC6900ExecutionModule, ExecutionManifest} from "@erc6900/reference-implementation/interfaces/IERC6900ExecutionModule.sol";
+import {
+    IERC6900ExecutionModule,
+    ExecutionManifest
+} from "@erc6900/reference-implementation/interfaces/IERC6900ExecutionModule.sol";
 
 // Local imports
 import {BaseTest} from "../helpers/BaseTest.sol";
@@ -198,7 +201,7 @@ contract DCAModuleTest is BaseTest {
 
         // Check execution functions
         assertEq(manifest.executionFunctions.length, 5);
-        
+
         // Check createPlan
         assertEq(manifest.executionFunctions[0].executionSelector, dcaModule.createPlan.selector);
         assertFalse(manifest.executionFunctions[0].skipRuntimeValidation);

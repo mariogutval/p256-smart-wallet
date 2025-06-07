@@ -58,12 +58,11 @@ contract DCAModule is IDCAModule, BaseModule {
     /// @param amount The amount of input tokens to swap in each execution
     /// @param everySeconds The time interval between executions in seconds
     /// @return id The unique identifier of the created plan
-    function createPlan(
-        address tokenIn,
-        address tokenOut,
-        uint256 amount,
-        uint256 everySeconds
-    ) external override returns (uint256 id) {
+    function createPlan(address tokenIn, address tokenOut, uint256 amount, uint256 everySeconds)
+        external
+        override
+        returns (uint256 id)
+    {
         if (amount == 0) revert InvalidAmount();
         if (everySeconds == 0) revert InvalidInterval();
 
@@ -83,11 +82,7 @@ contract DCAModule is IDCAModule, BaseModule {
     /// @param id The unique identifier of the plan to execute
     /// @param dexRouter The address of the DEX router to use
     /// @param swapData The calldata for the swap operation
-    function executePlan(
-        uint256 id,
-        address dexRouter,
-        bytes calldata swapData
-    ) external override nonReentrant {
+    function executePlan(uint256 id, address dexRouter, bytes calldata swapData) external override nonReentrant {
         Plan storage p = _plans[id];
 
         if (!p.active) revert PlanInactive();
@@ -222,8 +217,7 @@ contract DCAModule is IDCAModule, BaseModule {
     /// @param id The interface ID to check
     /// @return Whether the interface is supported
     function supportsInterface(bytes4 id) public view override(BaseModule, IERC165) returns (bool) {
-        return id == type(IERC6900ExecutionModule).interfaceId || 
-               id == type(IDCAModule).interfaceId || 
-               super.supportsInterface(id);
+        return id == type(IERC6900ExecutionModule).interfaceId || id == type(IDCAModule).interfaceId
+            || super.supportsInterface(id);
     }
 }
