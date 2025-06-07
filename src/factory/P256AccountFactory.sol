@@ -8,6 +8,7 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
 import {ReferenceModularAccount} from "@erc6900/reference-implementation/account/ReferenceModularAccount.sol";
 import {ValidationConfigLib} from "@erc6900/reference-implementation/libraries/ValidationConfigLib.sol";
+import {P256PublicKey} from "../utils/Types.sol";
 
 /// @notice Factory that deploys a **ReferenceModularAccount**
 ///         pre-loaded with the `P256ValidationModule`.
@@ -19,11 +20,6 @@ contract P256AccountFactory is Ownable {
     ReferenceModularAccount public immutable ACCOUNT_IMPL;
     bytes32 private immutable _PROXY_BYTECODE_HASH;
     address public immutable P256_VALIDATION_MODULE;
-
-    struct P256PublicKey {
-        uint256 x; // x coordinate
-        uint256 y; // y coordinate
-    }
 
     event ModularAccountDeployed(address indexed account, bytes32 indexed passkeyHash, uint256 salt);
 

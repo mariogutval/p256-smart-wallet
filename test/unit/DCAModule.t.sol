@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {BaseTest, MockERC20, MockDEXRouter} from "../helpers/BaseTest.sol";
-import {DCAModule} from "../../src/modules/DCAModule.sol";
+// OpenZeppelin imports
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
+
+// ERC6900 imports
 import {IERC6900ExecutionModule, ExecutionManifest} from "@erc6900/reference-implementation/interfaces/IERC6900ExecutionModule.sol";
+
+// Local imports
+import {BaseTest} from "../helpers/BaseTest.sol";
+import {DCAModule} from "../../src/modules/DCAModule.sol";
+import {MockERC20, MockDEXRouter} from "../helpers/BaseTest.sol";
 
 contract DCAModuleTest is BaseTest {
     DCAModule public dcaModule;

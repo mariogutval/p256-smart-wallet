@@ -1,10 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+// Forge imports
 import {Test} from "forge-std/Test.sol";
-import {P256PublicKey} from "../../src/utils/Types.sol";
-import {FCL_ecdsa_utils} from "@FCL/FCL_ecdsa_utils.sol";
+
+// OpenZeppelin imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+// FCL imports
+import {FCL_ecdsa_utils} from "@FCL/FCL_ecdsa_utils.sol";
+
+// Local imports
+import {P256PublicKey} from "../../src/utils/Types.sol";
 
 contract BaseTest is Test {
     struct TestUser {

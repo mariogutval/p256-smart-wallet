@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+// Forge imports
+import {Vm} from "forge-std/Vm.sol";
+
+// Local imports
 import {P256VerifierLib} from "../../src/libraries/P256VerifierLib.sol";
 import {P256SCLVerifierLib} from "../../src/libraries/P256SCLVerifierLib.sol";
-import { Vm } from "forge-std/Vm.sol";
 
 library SigningUtilsLib {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));

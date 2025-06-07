@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+// OpenZeppelin imports
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+
+// ERC6900 imports
+import {PackedUserOperation} from "@erc6900/reference-implementation/interfaces/IERC6900ValidationModule.sol";
+import {IERC6900ValidationModule} from "@erc6900/reference-implementation/interfaces/IERC6900ValidationModule.sol";
+
+// FCL imports
+import {FCL_ecdsa_utils} from "@FCL/FCL_ecdsa_utils.sol";
+
+// Local imports
 import {BaseTest} from "../helpers/BaseTest.sol";
 import {P256ValidationModule} from "../../src/modules/P256ValidationModule.sol";
 import {IP256ValidationModule} from "../../src/modules/IP256ValidationModule.sol";
 import {P256PublicKey} from "../../src/utils/Types.sol";
 import {P256VerifierLib} from "../../src/libraries/P256VerifierLib.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {PackedUserOperation} from "@erc6900/reference-implementation/interfaces/IERC6900ValidationModule.sol";
-import {IERC6900ValidationModule} from "@erc6900/reference-implementation/interfaces/IERC6900ValidationModule.sol";
 import {SigningUtilsLib} from "../helpers/SigningUtilsLib.sol";
-import { FCL_ecdsa_utils } from "@FCL/FCL_ecdsa_utils.sol";
 
 contract P256ValidationModuleTest is BaseTest {
     using MessageHashUtils for bytes32;
