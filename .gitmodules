@@ -7,3 +7,6 @@
 [submodule "lib/crypto-lib"]
 	path = lib/crypto-lib
 	url = https://github.com/get-smooth/crypto-lib
+[submodule "lib/FreshCryptoLib"]
+	path = lib/FreshCryptoLib
+	url = https://github.com/rdubois-crypto/FreshCryptoLib

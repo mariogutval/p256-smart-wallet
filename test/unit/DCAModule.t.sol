@@ -1,84 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Test} from "forge-std/Test.sol";
+import {BaseTest, MockERC20, MockDEXRouter} from "../helpers/BaseTest.sol";
 import {DCAModule} from "../../src/modules/DCAModule.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
-import {IERC6900ExecutionModule} from "@erc6900/reference-implementation/interfaces/IERC6900ExecutionModule.sol";
+import {IERC6900ExecutionModule, ExecutionManifest} from "@erc6900/reference-implementation/interfaces/IERC6900ExecutionModule.sol";
 
-contract MockERC20 is IERC20 {
-    mapping(address => uint256) private _balances;
-    mapping(address => mapping(address => uint256)) private _allowances;
-    uint256 private _totalSupply;
-    string private _name;
-    string private _symbol;
-
-    constructor(string memory name_, string memory symbol_) {
-        _name = name_;
-        _symbol = symbol_;
-    }
-
-    function name() external view returns (string memory) {
-        return _name;
-    }
-
-    function symbol() external view returns (string memory) {
-        return _symbol;
-    }
-
-    function decimals() external pure returns (uint8) {
-        return 18;
-    }
-
-    function totalSupply() external view returns (uint256) {
-        return _totalSupply;
-    }
-
-    function balanceOf(address account) external view returns (uint256) {
-        return _balances[account];
-    }
-
-    function transfer(address to, uint256 amount) external returns (bool) {
-        _balances[msg.sender] -= amount;
-        _balances[to] += amount;
-        return true;
-    }
-
-    function allowance(address owner, address spender) external view returns (uint256) {
-        return _allowances[owner][spender];
-    }
-
-    function approve(address spender, uint256 amount) external returns (bool) {
-        _allowances[msg.sender][spender] = amount;
-        return true;
-    }
-
-    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
-        _allowances[from][msg.sender] -= amount;
-        _balances[from] -= amount;
-        _balances[to] += amount;
-        return true;
-    }
-
-    function mint(address to, uint256 amount) external {
-        _balances[to] += amount;
-        _totalSupply += amount;
-    }
-}
-
-contract MockDEXRouter {
-    function swap(bytes calldata) external returns (bool) {
-        return true;
-    }
-}
-
-contract DCAModuleTest is Test {
+contract DCAModuleTest is BaseTest {
     DCAModule public dcaModule;
     MockERC20 public tokenIn;
     MockERC20 public tokenOut;
     MockDEXRouter public dexRouter;
-    address public testAccount;
+    TestUser public testUser;
 
     event PlanCreated(uint256 indexed id, address tokenIn, address tokenOut);
     event PlanExecuted(uint256 indexed id);
@@ -89,17 +22,17 @@ contract DCAModuleTest is Test {
         tokenIn = new MockERC20("Token In", "TIN");
         tokenOut = new MockERC20("Token Out", "TOUT");
         dexRouter = new MockDEXRouter();
-        testAccount = makeAddr("testAccount");
+        testUser = createUser("testUser");
 
         // Whitelist the DEX router
         dcaModule.whitelistDex(address(dexRouter));
 
         // Mint some tokens to test account
-        tokenIn.mint(testAccount, 1000 ether);
+        tokenIn.mint(testUser.addr, 1000 ether);
     }
 
     function test_CreatePlan() public {
-        vm.startPrank(testAccount);
+        vm.startPrank(testUser.addr);
 
         // Create a DCA plan
         uint256 amount = 100 ether;
@@ -116,7 +49,7 @@ contract DCAModuleTest is Test {
     }
 
     function test_ExecutePlan() public {
-        vm.startPrank(testAccount);
+        vm.startPrank(testUser.addr);
 
         // Create a DCA plan
         uint256 amount = 100 ether;
@@ -141,7 +74,7 @@ contract DCAModuleTest is Test {
     }
 
     function test_CancelPlan() public {
-        vm.startPrank(testAccount);
+        vm.startPrank(testUser.addr);
 
         // Create a DCA plan
         uint256 planId = dcaModule.createPlan(address(tokenIn), address(tokenOut), 100 ether, 1 days);
@@ -156,7 +89,7 @@ contract DCAModuleTest is Test {
     }
 
     function test_ExecutePlan_NotWhitelisted() public {
-        vm.startPrank(testAccount);
+        vm.startPrank(testUser.addr);
 
         // Create a DCA plan
         uint256 planId = dcaModule.createPlan(address(tokenIn), address(tokenOut), 100 ether, 1 days);
@@ -175,7 +108,7 @@ contract DCAModuleTest is Test {
     }
 
     function test_ExecutePlan_TooEarly() public {
-        vm.startPrank(testAccount);
+        vm.startPrank(testUser.addr);
 
         // Create a DCA plan with 1 day interval
         uint256 planId = dcaModule.createPlan(address(tokenIn), address(tokenOut), 100 ether, 1 days);
@@ -190,7 +123,7 @@ contract DCAModuleTest is Test {
     }
 
     function test_ExecutePlan_Inactive() public {
-        vm.startPrank(testAccount);
+        vm.startPrank(testUser.addr);
 
         // Create and immediately cancel a plan
         uint256 planId = dcaModule.createPlan(address(tokenIn), address(tokenOut), 100 ether, 1 days);
@@ -242,5 +175,55 @@ contract DCAModuleTest is Test {
         assertEq(selectors[2], dcaModule.cancelPlan.selector);
         assertEq(selectors[3], dcaModule.whitelistDex.selector);
         assertEq(selectors[4], dcaModule.unwhitelistDex.selector);
+    }
+
+    function test_ExecutionManifest() public {
+        ExecutionManifest memory manifest = dcaModule.executionManifest();
+
+        // Check execution functions
+        assertEq(manifest.executionFunctions.length, 5);
+        
+        // Check createPlan
+        assertEq(manifest.executionFunctions[0].executionSelector, dcaModule.createPlan.selector);
+        assertFalse(manifest.executionFunctions[0].skipRuntimeValidation);
+        assertTrue(manifest.executionFunctions[0].allowGlobalValidation);
+
+        // Check executePlan
+        assertEq(manifest.executionFunctions[1].executionSelector, dcaModule.executePlan.selector);
+        assertFalse(manifest.executionFunctions[1].skipRuntimeValidation);
+        assertTrue(manifest.executionFunctions[1].allowGlobalValidation);
+
+        // Check cancelPlan
+        assertEq(manifest.executionFunctions[2].executionSelector, dcaModule.cancelPlan.selector);
+        assertFalse(manifest.executionFunctions[2].skipRuntimeValidation);
+        assertTrue(manifest.executionFunctions[2].allowGlobalValidation);
+
+        // Check whitelistDex
+        assertEq(manifest.executionFunctions[3].executionSelector, dcaModule.whitelistDex.selector);
+        assertFalse(manifest.executionFunctions[3].skipRuntimeValidation);
+        assertTrue(manifest.executionFunctions[3].allowGlobalValidation);
+
+        // Check unwhitelistDex
+        assertEq(manifest.executionFunctions[4].executionSelector, dcaModule.unwhitelistDex.selector);
+        assertFalse(manifest.executionFunctions[4].skipRuntimeValidation);
+        assertTrue(manifest.executionFunctions[4].allowGlobalValidation);
+
+        // Check hooks (should be empty)
+        assertEq(manifest.executionHooks.length, 0);
+
+        // Check interface IDs (should be empty)
+        assertEq(manifest.interfaceIds.length, 0);
+    }
+
+    function test_OnInstall() public {
+        // onInstall is a no-op, but we should test it doesn't revert
+        bytes memory installData = "";
+        dcaModule.onInstall(installData);
+    }
+
+    function test_OnUninstall() public {
+        // onUninstall is a no-op, but we should test it doesn't revert
+        bytes memory uninstallData = "";
+        dcaModule.onUninstall(uninstallData);
     }
 }

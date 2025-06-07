@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Test} from "forge-std/Test.sol";
+import {BaseTest} from "../helpers/BaseTest.sol";
 import {P256ValidationModule} from "../../src/modules/P256ValidationModule.sol";
 import {IP256ValidationModule} from "../../src/modules/IP256ValidationModule.sol";
 import {P256PublicKey} from "../../src/utils/Types.sol";
@@ -10,47 +10,38 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {PackedUserOperation} from "@erc6900/reference-implementation/interfaces/IERC6900ValidationModule.sol";
 import {IERC6900ValidationModule} from "@erc6900/reference-implementation/interfaces/IERC6900ValidationModule.sol";
 import {SigningUtilsLib} from "../helpers/SigningUtilsLib.sol";
+import { FCL_ecdsa_utils } from "@FCL/FCL_ecdsa_utils.sol";
 
-contract P256ValidationModuleTest is Test {
+contract P256ValidationModuleTest is BaseTest {
     using MessageHashUtils for bytes32;
 
     P256ValidationModule public validationModule;
-    address public testAccount;
-    uint32 public constant TEST_ENTITY_ID = 1;
-
-    // Sample P-256 public key (these are example values, replace with actual test values)
+    TestUser public testUser;
     P256PublicKey public testPasskey;
 
     event PasskeyTransferred(
         address indexed account, uint32 indexed entityId, P256PublicKey newKey, P256PublicKey prevKey
     );
 
-    /* deterministic key: priv = 1 */
-    uint256 constant PRIV_KEY = 1;
-    P256PublicKey public PASSKEY = P256PublicKey({
-        x: 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296,
-        y: 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5
-    });
-
     function setUp() public {
         validationModule = new P256ValidationModule();
-        testAccount = makeAddr("testAccount");
-        testPasskey = PASSKEY;
+        testUser = createUser("testUser");
+        testPasskey = createP256Key(testUser.privateKey);
     }
 
     function test_TransferPasskey() public {
-        vm.startPrank(testAccount);
+        vm.startPrank(testUser.addr);
 
         // Initial state check
-        (uint256 x, uint256 y) = validationModule.passkeys(TEST_ENTITY_ID, testAccount);
+        (uint256 x, uint256 y) = validationModule.passkeys(DEFAULT_ENTITY_ID, testUser.addr);
         assertEq(x, 0);
         assertEq(y, 0);
 
         // Transfer passkey
-        validationModule.transferPasskey(TEST_ENTITY_ID, testPasskey);
+        validationModule.transferPasskey(DEFAULT_ENTITY_ID, testPasskey);
 
         // Verify new state
-        (x, y) = validationModule.passkeys(TEST_ENTITY_ID, testAccount);
+        (x, y) = validationModule.passkeys(DEFAULT_ENTITY_ID, testUser.addr);
         assertEq(x, testPasskey.x);
         assertEq(y, testPasskey.y);
 
@@ -58,13 +49,13 @@ contract P256ValidationModuleTest is Test {
     }
 
     function test_OnInstall() public {
-        bytes memory installData = abi.encode(TEST_ENTITY_ID, testPasskey);
+        bytes memory installData = abi.encode(DEFAULT_ENTITY_ID, testPasskey);
 
-        vm.startPrank(testAccount);
+        vm.startPrank(testUser.addr);
         validationModule.onInstall(installData);
 
         // Verify passkey was installed
-        (uint256 x, uint256 y) = validationModule.passkeys(TEST_ENTITY_ID, testAccount);
+        (uint256 x, uint256 y) = validationModule.passkeys(DEFAULT_ENTITY_ID, testUser.addr);
         assertEq(x, testPasskey.x);
         assertEq(y, testPasskey.y);
 
@@ -73,17 +64,17 @@ contract P256ValidationModuleTest is Test {
 
     function test_OnUninstall() public {
         // First install a passkey
-        bytes memory installData = abi.encode(TEST_ENTITY_ID, testPasskey);
+        bytes memory installData = abi.encode(DEFAULT_ENTITY_ID, testPasskey);
 
-        vm.startPrank(testAccount);
+        vm.startPrank(testUser.addr);
         validationModule.onInstall(installData);
 
         // Then uninstall it
-        bytes memory uninstallData = abi.encode(TEST_ENTITY_ID);
+        bytes memory uninstallData = abi.encode(DEFAULT_ENTITY_ID);
         validationModule.onUninstall(uninstallData);
 
         // Verify passkey was removed
-        (uint256 x, uint256 y) = validationModule.passkeys(TEST_ENTITY_ID, testAccount);
+        (uint256 x, uint256 y) = validationModule.passkeys(DEFAULT_ENTITY_ID, testUser.addr);
         assertEq(x, 0);
         assertEq(y, 0);
 
@@ -105,13 +96,13 @@ contract P256ValidationModuleTest is Test {
     }
 
     function test_ValidateRuntime_Authorized() public {
-        vm.startPrank(testAccount);
+        vm.startPrank(testUser.addr);
 
         // Test when sender is the account itself
         validationModule.validateRuntime(
-            testAccount,
-            TEST_ENTITY_ID,
-            testAccount, // sender is the account
+            testUser.addr,
+            DEFAULT_ENTITY_ID,
+            testUser.addr, // sender is the account
             0, // value
             "", // data
             "" // auth blob
@@ -119,8 +110,8 @@ contract P256ValidationModuleTest is Test {
 
         // Test when sender is the module itself
         validationModule.validateRuntime(
-            testAccount,
-            TEST_ENTITY_ID,
+            testUser.addr,
+            DEFAULT_ENTITY_ID,
             address(validationModule), // sender is the module
             0,
             "",
@@ -134,85 +125,63 @@ contract P256ValidationModuleTest is Test {
         address unauthorizedSender = makeAddr("unauthorized");
 
         vm.expectRevert(IP256ValidationModule.NotAuthorized.selector);
-        validationModule.validateRuntime(testAccount, TEST_ENTITY_ID, unauthorizedSender, 0, "", "");
+        validationModule.validateRuntime(testUser.addr, DEFAULT_ENTITY_ID, unauthorizedSender, 0, "", "");
     }
 
     function test_ValidateSignature() public {
-        vm.startPrank(testAccount);
+        // First register the passkey
+        vm.startPrank(testUser.addr);
+        validationModule.transferPasskey(DEFAULT_ENTITY_ID, testPasskey);
+        vm.stopPrank();
 
-        // First install a passkey
-        validationModule.transferPasskey(TEST_ENTITY_ID, PASSKEY);
-
-        // Create a test message and hash
+        // Create a test message hash
         bytes32 messageHash = keccak256("test message");
-        bytes32 digest = messageHash.toEthSignedMessageHash();
 
-        // The module will internally compute replaySafeHash(account, ethDigest)
-        bytes32 wrapped = keccak256(abi.encode(testAccount, digest));
+        // Create a valid signature
+        bytes memory signature = SigningUtilsLib.signHashP256(testUser.privateKey, messageHash);
 
-        // Sign the wrapped hash
-        bytes memory signature = SigningUtilsLib.signHashP256(PRIV_KEY, wrapped);
+        // Create a replay-safe hash
+        bytes32 replaySafeHash = validationModule.replaySafeHash(testUser.addr, messageHash);
 
-        // Test signature validation
+        // Validate the signature
         bytes4 result = validationModule.validateSignature(
-            testAccount,
-            TEST_ENTITY_ID,
+            testUser.addr,
+            DEFAULT_ENTITY_ID,
             address(0), // sender
-            digest,
+            messageHash,
             signature
         );
 
-        assertTrue(result == 0x1626ba7e);
-
-        vm.stopPrank();
+        assertTrue(result == _1271_MAGIC_VALUE, "Signature validation failed");
     }
 
     function test_ValidateUserOp() public {
-        vm.startPrank(testAccount);
+        vm.startPrank(testUser.addr);
 
         // First install a passkey
-        validationModule.transferPasskey(TEST_ENTITY_ID, testPasskey);
+        validationModule.transferPasskey(DEFAULT_ENTITY_ID, testPasskey);
 
-        // Create a test user operation
-        bytes32 userOpHash = keccak256("test user op");
+        PackedUserOperation memory userOp = PackedUserOperation({
+            sender: testUser.addr,
+            nonce: 0,
+            initCode: "",
+            callData: "",
+            accountGasLimits: bytes32(0),
+            preVerificationGas: 0,
+            gasFees: bytes32(0),
+            paymasterAndData: "",
+            signature: ""
+        });
 
-        // Note: In a real test, we would need to create a proper PackedUserOperation
-        // and generate a valid P-256 signature
-        bytes memory signature = new bytes(96);
+        bytes32 userOpHash = keccak256(abi.encode(userOp));
 
-        // Test user operation validation
-        uint256 result = validationModule.validateUserOp(
-            TEST_ENTITY_ID,
-            PackedUserOperation({
-                sender: testAccount,
-                nonce: 0,
-                initCode: "",
-                callData: "",
-                accountGasLimits: bytes32(0),
-                preVerificationGas: 0,
-                gasFees: bytes32(0),
-                paymasterAndData: "",
-                signature: signature
-            }),
-            userOpHash
-        );
+        bytes memory signature = SigningUtilsLib.signHashP256(testUser.privateKey, userOpHash);
+        userOp.signature = signature;
 
-        // Note: The actual result will depend on the signature validity
-        // This test needs to be updated with a valid signature
-        assertTrue(result == 0 || result == 1);
+        uint256 result = validationModule.validateUserOp(DEFAULT_ENTITY_ID, userOp, userOpHash);
+
+        assertTrue(result == 0);
 
         vm.stopPrank();
-    }
-
-    // Helper function to create a valid P-256 signature
-    // This is a placeholder - in a real implementation, you would need to
-    // implement proper P-256 signature generation
-    function _createValidSignature(bytes32 messageHash, P256PublicKey memory key)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        // This is just a placeholder - implement actual P-256 signature generation
-        return new bytes(64);
     }
 }

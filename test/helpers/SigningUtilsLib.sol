@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {P256VerifierLib} from "../../src/libraries/P256VerifierLib.sol";
+import {P256SCLVerifierLib} from "../../src/libraries/P256SCLVerifierLib.sol";
 import { Vm } from "forge-std/Vm.sol";
 
 library SigningUtilsLib {
@@ -10,11 +11,13 @@ library SigningUtilsLib {
 
     /// @notice Sign a *32-byte* digest so that P256ValidationModule will accept it.
     function signHashP256(uint256 privKey, bytes32 digest) internal pure returns (bytes memory sig) {
-        // vm.signP256 already expects the *message*.
+        // The verifier checks signatures over `sha256(digest)`, hence we pre-hash here so that
+        // `vm.signP256` signs the correct message.
+        digest = sha256(abi.encodePacked(digest));
+
         (bytes32 r, bytes32 s) = vm.signP256(privKey, digest);
 
-        // Low-s canonisation (module does it internally, but harmless here)
-        if (uint256(s) > (P256_N >> 1)) {
+        if (uint256(s) > P256SCLVerifierLib.P256_N_DIV_2) {
             s = bytes32(P256_N - uint256(s));
         }
 

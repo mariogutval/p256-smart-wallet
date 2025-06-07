@@ -2,3 +2,4 @@
 @eth-infinitism/account-abstraction/=lib/reference-implementation/lib/account-abstraction/contracts/
 @openzeppelin/contracts/=lib/reference-implementation/lib/openzeppelin-contracts/contracts/
 @SCL/=lib/crypto-lib/src/
+@FCL/=lib/FreshCryptoLib/solidity/src/

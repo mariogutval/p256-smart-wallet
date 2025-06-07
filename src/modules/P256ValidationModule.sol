@@ -16,7 +16,6 @@ import {BaseModule} from "@erc6900/reference-implementation/modules/BaseModule.s
 /* ─── Signature helpers – same lib you already used in your PoC ─────────── */
 import {P256VerifierLib} from "../libraries/P256VerifierLib.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {console} from "forge-std/console.sol";
 
 /* ───────────────────────────── Contract ──────────────────────────────── */
 /// @title P-256 (WebAuthn) Validation Module
@@ -102,27 +101,31 @@ contract P256ValidationModule is IP256ValidationModule, ReplaySafeWrapper, BaseM
         if (sender != address(this) && sender != account) {
             revert NotAuthorized();
         }
-
-        // No extra logic needed for pass-keys: any state-changing call must
-        // still come through a UserOperation → validateUserOp → account logic.
-        return;
     }
 
     /// @inheritdoc IERC6900ValidationModule
     function validateSignature(
         address account,
         uint32 entityId,
-        address, /* sender        – unused in this module */
-        bytes32 digest,
+        address sender,
+        bytes32 messageHash,
         bytes calldata signature
-    ) external view override returns (bytes4) {
-        bytes32 wrapped = replaySafeHash(account, digest);
-
+    ) public view override returns (bytes4) {
+        // Get the public key for this entity
         P256PublicKey memory key = passkeys[entityId][account];
 
-        bool ok = P256VerifierLib._verifyRawP256Signature(wrapped, signature, key.x, key.y);
+        // Create replay-safe hash
+        bytes32 replaySafeHash = replaySafeHash(account, messageHash);
 
-        return ok ? _1271_MAGIC_VALUE : _1271_INVALID;
+        // Verify the signature
+        bool isValid = P256VerifierLib._verifyRawP256Signature(
+            messageHash,
+            signature,
+            key.x,
+            key.y
+        );
+
+        return isValid ? _1271_MAGIC_VALUE : _1271_INVALID;
     }
 
     /* ───────────────────── supportsInterface  ────────────────────────── */
