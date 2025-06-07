@@ -10,6 +10,7 @@ import {IERC6900ExecutionModule, ExecutionManifest} from "@erc6900/reference-imp
 // Local imports
 import {BaseTest} from "../helpers/BaseTest.sol";
 import {DCAModule} from "../../src/modules/DCAModule.sol";
+import {IDCAModule} from "../../src/modules/IDCAModule.sol";
 import {MockERC20, MockDEXRouter} from "../helpers/BaseTest.sol";
 
 contract DCAModuleTest is BaseTest {
@@ -22,6 +23,8 @@ contract DCAModuleTest is BaseTest {
     event PlanCreated(uint256 indexed id, address tokenIn, address tokenOut);
     event PlanExecuted(uint256 indexed id);
     event PlanCancelled(uint256 indexed id);
+    event DexWhitelisted(address indexed dex);
+    event DexUnwhitelisted(address indexed dex);
 
     function setUp() public {
         dcaModule = new DCAModule();
@@ -107,7 +110,7 @@ contract DCAModuleTest is BaseTest {
         address nonWhitelistedRouter = makeAddr("nonWhitelisted");
         bytes memory swapData = abi.encodeWithSelector(MockDEXRouter.swap.selector, "");
 
-        vm.expectRevert("DCA: DEX not whitelisted");
+        vm.expectRevert(abi.encodeWithSelector(IDCAModule.DexNotWhitelisted.selector));
         dcaModule.executePlan(planId, nonWhitelistedRouter, swapData);
 
         vm.stopPrank();
@@ -122,7 +125,7 @@ contract DCAModuleTest is BaseTest {
         // Try to execute immediately
         bytes memory swapData = abi.encodeWithSelector(MockDEXRouter.swap.selector, "");
 
-        vm.expectRevert("DCA: too early");
+        vm.expectRevert(abi.encodeWithSelector(IDCAModule.TooEarly.selector));
         dcaModule.executePlan(planId, address(dexRouter), swapData);
 
         vm.stopPrank();
@@ -138,7 +141,7 @@ contract DCAModuleTest is BaseTest {
         // Try to execute cancelled plan
         bytes memory swapData = abi.encodeWithSelector(MockDEXRouter.swap.selector, "");
 
-        vm.expectRevert("DCA: inactive");
+        vm.expectRevert(abi.encodeWithSelector(IDCAModule.PlanInactive.selector));
         dcaModule.executePlan(planId, address(dexRouter), swapData);
 
         vm.stopPrank();
@@ -147,6 +150,8 @@ contract DCAModuleTest is BaseTest {
     function test_WhitelistDex() public {
         address newDex = makeAddr("newDex");
 
+        vm.expectEmit(true, false, false, false);
+        emit DexWhitelisted(newDex);
         dcaModule.whitelistDex(newDex);
         assertTrue(dcaModule.dexWhitelist(newDex));
     }
@@ -155,25 +160,30 @@ contract DCAModuleTest is BaseTest {
         address dex = makeAddr("dex");
 
         dcaModule.whitelistDex(dex);
+        vm.expectEmit(true, false, false, false);
+        emit DexUnwhitelisted(dex);
         dcaModule.unwhitelistDex(dex);
         assertFalse(dcaModule.dexWhitelist(dex));
     }
 
-    function test_ModuleId() public {
+    function test_ModuleId() public view {
         string memory id = dcaModule.moduleId();
         assertEq(id, "erc6900.dca-execution-module.1.0.0");
     }
 
-    function test_SupportsInterface() public {
+    function test_SupportsInterface() public view {
         // Test ERC165 interface support
         assertTrue(dcaModule.supportsInterface(0x01ffc9a7)); // IERC165
         // IERC6900ExecutionModule interface id
         bytes4 erc6900Id = type(IERC6900ExecutionModule).interfaceId;
         assertTrue(dcaModule.supportsInterface(erc6900Id));
+        // IDCAModule interface id
+        bytes4 dcaId = type(IDCAModule).interfaceId;
+        assertTrue(dcaModule.supportsInterface(dcaId));
         assertFalse(dcaModule.supportsInterface(0xffffffff)); // Random interface
     }
 
-    function test_Selectors() public {
+    function test_Selectors() public view {
         bytes4[] memory selectors = dcaModule.selectors();
         assertEq(selectors.length, 5);
         assertEq(selectors[0], dcaModule.createPlan.selector);
@@ -183,7 +193,7 @@ contract DCAModuleTest is BaseTest {
         assertEq(selectors[4], dcaModule.unwhitelistDex.selector);
     }
 
-    function test_ExecutionManifest() public {
+    function test_ExecutionManifest() public view {
         ExecutionManifest memory manifest = dcaModule.executionManifest();
 
         // Check execution functions
@@ -231,5 +241,19 @@ contract DCAModuleTest is BaseTest {
         // onUninstall is a no-op, but we should test it doesn't revert
         bytes memory uninstallData = "";
         dcaModule.onUninstall(uninstallData);
+    }
+
+    function test_CreatePlan_InvalidAmount() public {
+        vm.startPrank(testUser.addr);
+        vm.expectRevert(abi.encodeWithSelector(IDCAModule.InvalidAmount.selector));
+        dcaModule.createPlan(address(tokenIn), address(tokenOut), 0, 1 days);
+        vm.stopPrank();
+    }
+
+    function test_CreatePlan_InvalidInterval() public {
+        vm.startPrank(testUser.addr);
+        vm.expectRevert(abi.encodeWithSelector(IDCAModule.InvalidInterval.selector));
+        dcaModule.createPlan(address(tokenIn), address(tokenOut), 100 ether, 0);
+        vm.stopPrank();
     }
 }
